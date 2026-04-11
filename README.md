@@ -16,7 +16,7 @@ Music streaming platforms generate millions of events per day — song plays, pa
 The pipeline is designed to be **engine-agnostic** (data stored in open Iceberg format, readable by any engine), **fault-tolerant** (WAP pattern prevents bad data reaching dashboards), and **cost-efficient** (external tables avoid BigQuery storage costs while retaining full SQL access).
 
 ## Link to Looker Dashboard
-[Looker Dashboard BeatSream Analytics](https://lookerstudio.google.com/s/niq5j3dzzz0)
+<a href="https://lookerstudio.google.com/s/niq5j3dzzz0" target="_blank">Looker Dashboard BeatStream Analytics</a>
 
 ### Snapshot of Dashboard for Preview
 
