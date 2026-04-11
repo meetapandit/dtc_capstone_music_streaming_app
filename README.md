@@ -15,6 +15,13 @@ Music streaming platforms generate millions of events per day — song plays, pa
 
 The pipeline is designed to be **engine-agnostic** (data stored in open Iceberg format, readable by any engine), **fault-tolerant** (WAP pattern prevents bad data reaching dashboards), and **cost-efficient** (external tables avoid BigQuery storage costs while retaining full SQL access).
 
+## Link to Looker Dashboard
+[Looker Dashboard BeatSream Analytics](https://lookerstudio.google.com/s/niq5j3dzzz0)
+
+### Snapshot of Dashboard for Preview
+
+![BeatStream Analytics Dashboard](screenshots/dashboard.png)
+
 ---
 
 ## Architecture
@@ -312,6 +319,8 @@ Cloud Composer 3 (managed Airflow 2.10.5) orchestrates the dbt transformation pi
 - Scheduled, automated refreshes without manual intervention
 - Full run history, logs, and retry logic in the Airflow UI
 - Native GCP integration — uses Application Default Credentials, no secrets to manage
+
+![Airflow DAG](screenshots/Cloud_ccomposer_DAG.png)
 
 ### WAP Pattern — Write, Audit, Publish
 
