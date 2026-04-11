@@ -214,8 +214,27 @@ terraform/terraform.tfstate
 terraform/terraform.tfstate.backup
 terraform/*.tfstate*
 terraform/crash.log
+terraform/tfplan
+
+# Root-level terraform state (if apply run from root)
+terraform.tfstate
+terraform.tfstate.backup
 
 # GCP credentials — never commit these
-*.json
 service-account-key.json
 credentials.json
+
+# dbt
+dbt/logs/
+dbt/target/
+dbt/dbt_packages/
+dbt/.user.yml
+
+# eventsim generated output and build artifacts
+eventsim/output/
+eventsim/logs/
+eventsim-assembly-2.0.jar
+scala-2.12
+scala-2.12/
+target
+target/

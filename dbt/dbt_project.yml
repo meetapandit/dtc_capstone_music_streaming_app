@@ -1,0 +1,20 @@
+name: 'music_streaming'
+version: '1.0.0'
+config-version: 2
+
+profile: 'music_streaming'
+
+model-paths: ["models"]
+test-paths: ["tests"]
+macro-paths: ["macros"]
+target-path: "target"
+clean-targets: ["target", "dbt_packages"]
+
+models:
+  music_streaming:
+    silver:
+      +materialized: table
+      +schema: silver
+    gold:
+      +materialized: table
+      +schema: gold

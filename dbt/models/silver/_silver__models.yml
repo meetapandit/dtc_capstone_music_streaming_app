@@ -1,0 +1,48 @@
+version: 2
+
+models:
+  - name: silver_listen_events
+    description: Cleaned song play events with timestamps and derived dimensions.
+    columns:
+      - name: user_id
+        tests: [not_null]
+      - name: artist
+        tests: [not_null]
+      - name: song
+        tests: [not_null]
+      - name: duration_seconds
+        tests: [not_null]
+      - name: level
+        tests:
+          - accepted_values:
+              values: ['paid', 'free']
+      - name: event_timestamp
+        tests: [not_null]
+      - name: event_date
+        tests: [not_null]
+
+  - name: silver_page_view_events
+    description: Cleaned page navigation events, system pages excluded.
+    columns:
+      - name: user_id
+        tests: [not_null]
+      - name: event_date
+        tests: [not_null]
+
+  - name: silver_auth_events
+    description: Cleaned authentication events with login success flag.
+    columns:
+      - name: user_id
+        tests: [not_null]
+      - name: event_date
+        tests: [not_null]
+
+  - name: silver_status_change_events
+    description: Subscription level changes with upgrade/downgrade/churn category.
+    columns:
+      - name: user_id
+        tests: [not_null]
+      - name: change_category
+        tests:
+          - accepted_values:
+              values: ['upgrade', 'downgrade', 'churn', 'other']

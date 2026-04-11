@@ -1,0 +1,61 @@
+# =============================================================================
+# Flink Session Cluster
+# Uses custom image with Kafka + Iceberg + GCS connector pre-baked
+# Image: us-west1-docker.pkg.dev/dtc-capstone-491118/music-streaming/flink-iceberg:1.18.1
+# =============================================================================
+apiVersion: flink.apache.org/v1beta1
+kind: FlinkDeployment
+metadata:
+  name: music-streaming-flink
+  namespace: flink
+spec:
+  image: us-west1-docker.pkg.dev/dtc-capstone-491118/music-streaming/flink-iceberg:1.18.1
+  flinkVersion: v1_18
+  imagePullPolicy: Always
+
+  serviceAccount: flink-sa
+
+  flinkConfiguration:
+    taskmanager.numberOfTaskSlots: "4"
+    state.backend: rocksdb
+    state.backend.incremental: "true"
+    state.checkpoints.dir: gs://dtc-capstone-491118-iceberg-warehouse/flink/checkpoints
+    state.savepoints.dir:  gs://dtc-capstone-491118-iceberg-warehouse/flink/savepoints
+    execution.checkpointing.interval: "60000"
+    execution.checkpointing.mode: EXACTLY_ONCE
+    execution.checkpointing.timeout: "300000"
+    table.exec.source.idle-timeout: "30s"
+    pipeline.default-parallelism: "1"
+    web.submit.enable: "true"
+    fs.allowed-fallback-filesystems: gs
+
+  podTemplate:
+    spec:
+      serviceAccountName: flink-sa
+      tolerations:
+        - key: workload
+          operator: Equal
+          value: data
+          effect: NoSchedule
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: pool
+                    operator: In
+                    values: ["data"]
+
+  jobManager:
+    resource:
+      memory: "2048m"
+      cpu: 1
+    replicas: 1
+
+  taskManager:
+    resource:
+      memory: "2048m"
+      cpu: 1
+    replicas: 1
+
+  mode: native

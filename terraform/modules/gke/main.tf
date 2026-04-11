@@ -3,11 +3,12 @@ resource "google_container_cluster" "primary" {
 
   name     = "${var.environment}-${var.cluster_name}"
   project  = var.project_id
-  location = var.region # regional cluster = HA across 3 zones
+  location = var.zone # zonal cluster — single zone, fits within free-tier quota
 
   # Remove the default node pool — we manage our own
   remove_default_node_pool = true
   initial_node_count       = 1
+  deletion_protection      = false
 
   network    = var.network
   subnetwork = var.subnetwork
@@ -27,7 +28,7 @@ resource "google_container_cluster" "primary" {
   # Private cluster — nodes have no public IPs
   private_cluster_config {
     enable_private_nodes    = true
-    enable_private_endpoint = false        # keep public endpoint for kubectl access
+    enable_private_endpoint = false # keep public endpoint for kubectl access
     master_ipv4_cidr_block  = "172.16.0.0/28"
   }
 
@@ -58,7 +59,7 @@ resource "google_container_cluster" "primary" {
 resource "google_container_node_pool" "general" {
   name       = "general-pool"
   project    = var.project_id
-  location   = var.region
+  location   = var.zone
   cluster    = google_container_cluster.primary.name
   node_count = var.general_node_count
 
@@ -89,7 +90,13 @@ resource "google_container_node_pool" "general" {
 
   autoscaling {
     min_node_count = 1
-    max_node_count = 4
+    max_node_count = 2
+  }
+
+  timeouts {
+    create = "30m"
+    update = "30m"
+    delete = "60m" # pod drain + node deletion can exceed the 30m default
   }
 }
 
@@ -98,14 +105,14 @@ resource "google_container_node_pool" "general" {
 resource "google_container_node_pool" "data" {
   name       = "data-pool"
   project    = var.project_id
-  location   = var.region
+  location   = var.zone
   cluster    = google_container_cluster.primary.name
   node_count = var.data_node_count
 
   node_config {
     machine_type = var.data_machine_type
-    disk_size_gb = 200
-    disk_type    = "pd-ssd" # SSD for ClickHouse local storage
+    disk_size_gb = var.data_disk_size_gb
+    disk_type    = var.data_disk_type
 
     workload_metadata_config {
       mode = "GKE_METADATA"
@@ -134,7 +141,13 @@ resource "google_container_node_pool" "data" {
   }
 
   autoscaling {
-    min_node_count = 2
-    max_node_count = 6
+    min_node_count = 1
+    max_node_count = 2
+  }
+
+  timeouts {
+    create = "30m"
+    update = "30m"
+    delete = "60m"
   }
 }

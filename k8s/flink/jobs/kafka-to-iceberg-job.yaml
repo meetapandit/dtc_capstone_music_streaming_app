@@ -1,0 +1,43 @@
+# =============================================================================
+# Flink SQL Job: Kafka → Iceberg raw sink
+# Step 1: kubectl apply -f kafka-to-iceberg-job.yaml
+# Step 2: bash submit-job.sh
+# =============================================================================
+
+# ConfigMap holds the SQL script
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kafka-to-iceberg-sql
+  namespace: flink
+data:
+  kafka-to-iceberg.sql: |
+    -- loaded from kafka-to-iceberg.sql via submit-job.sh
+
+---
+# FlinkSessionJob submits the SQL to the running session cluster
+apiVersion: flink.apache.org/v1beta1
+kind: FlinkSessionJob
+metadata:
+  name: kafka-to-iceberg
+  namespace: flink
+spec:
+  deploymentName: music-streaming-flink
+  job:
+    jarURI: local:///opt/flink/opt/flink-sql-client.jar
+    parallelism: 2
+    upgradeMode: stateful
+    args:
+      - "-f"
+      - "/opt/sql/kafka-to-iceberg.sql"
+  podTemplate:
+    spec:
+      volumes:
+        - name: sql-scripts
+          configMap:
+            name: kafka-to-iceberg-sql
+      containers:
+        - name: flink-main-container
+          volumeMounts:
+            - name: sql-scripts
+              mountPath: /opt/sql

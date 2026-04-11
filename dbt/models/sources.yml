@@ -1,0 +1,64 @@
+version: 2
+
+sources:
+  - name: bronze
+    database: dtc-capstone-491118
+    schema: bronze
+    description: >
+      Raw Iceberg tables written by Flink from Kafka, exposed as BigQuery
+      external tables reading Iceberg snapshots from GCS.
+    tables:
+      - name: listen_events
+        description: Song play events from the listen-events Kafka topic.
+        columns:
+          - name: userId
+          - name: artist
+          - name: song
+          - name: length
+            description: Track duration in seconds (mapped from eventsim "duration" field).
+          - name: level
+            description: "'paid' or 'free'"
+          - name: sessionId
+          - name: itemInSession
+          - name: userAgent
+          - name: registration
+          - name: ts
+            description: Event timestamp as Unix epoch milliseconds.
+          - name: event_date
+            description: Partition column derived from ts.
+
+      - name: page_view_events
+        description: Page navigation events from the page-view-events Kafka topic.
+        columns:
+          - name: userId
+          - name: sessionId
+          - name: page
+          - name: method
+          - name: status
+          - name: level
+          - name: artist
+          - name: song
+          - name: length
+          - name: userAgent
+          - name: ts
+          - name: event_date
+
+      - name: auth_events
+        description: Authentication events (login/logout) from auth-events topic.
+        columns:
+          - name: userId
+          - name: sessionId
+          - name: level
+          - name: success
+          - name: ts
+          - name: event_date
+
+      - name: status_change_events
+        description: Subscription level change events (free ↔ paid).
+        columns:
+          - name: userId
+          - name: sessionId
+          - name: level
+          - name: auth
+          - name: ts
+          - name: event_date

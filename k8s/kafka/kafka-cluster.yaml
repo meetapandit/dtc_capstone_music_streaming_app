@@ -1,0 +1,76 @@
+# =============================================================================
+# Kafka Cluster — Strimzi v1 API with KRaft mode (no ZooKeeper)
+# Uses KafkaNodePool — required by Strimzi v1
+# Sized for capstone: 1 combined controller+broker node
+# =============================================================================
+
+# Node pool: combined controller + broker (KRaft mode)
+apiVersion: kafka.strimzi.io/v1
+kind: KafkaNodePool
+metadata:
+  name: combined
+  namespace: kafka
+  labels:
+    strimzi.io/cluster: music-streaming-kafka
+spec:
+  replicas: 1
+  roles:
+    - controller
+    - broker
+  storage:
+    type: jbod
+    volumes:
+      - id: 0
+        type: persistent-claim
+        size: 20Gi
+        class: standard-rwo
+        deleteClaim: false
+  resources:
+    requests:
+      memory: 1Gi
+      cpu: "500m"
+    limits:
+      memory: 2Gi
+      cpu: "1"
+  jvmOptions:
+    -Xms: 512m
+    -Xmx: 1024m
+
+---
+apiVersion: kafka.strimzi.io/v1
+kind: Kafka
+metadata:
+  name: music-streaming-kafka
+  namespace: kafka
+  annotations:
+    strimzi.io/node-pools: enabled
+    strimzi.io/kraft: enabled
+spec:
+  kafka:
+    version: 4.1.0
+    metadataVersion: 4.1-IV0
+
+    listeners:
+      # Internal — used by Flink and apps inside GKE
+      - name: plain
+        port: 9092
+        type: internal
+        tls: false
+      # External — used by eventsim on your laptop
+      - name: external
+        port: 9094
+        type: loadbalancer
+        tls: false
+
+    config:
+      offsets.topic.replication.factor: 1
+      transaction.state.log.replication.factor: 1
+      transaction.state.log.min.isr: 1
+      default.replication.factor: 1
+      min.insync.replicas: 1
+      auto.create.topics.enable: "false"
+      log.retention.hours: 168
+
+  entityOperator:
+    topicOperator: {}
+    userOperator: {}

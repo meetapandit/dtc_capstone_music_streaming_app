@@ -1,0 +1,63 @@
+# =============================================================================
+# Kafka Topics — managed by Strimzi Topic Operator
+# replicas: 1 matches single-broker capstone setup
+# =============================================================================
+apiVersion: kafka.strimzi.io/v1
+kind: KafkaTopic
+metadata:
+  name: listen-events
+  namespace: kafka
+  labels:
+    strimzi.io/cluster: music-streaming-kafka
+spec:
+  partitions: 4
+  replicas: 1
+  config:
+    retention.ms: "604800000"
+    cleanup.policy: delete
+    compression.type: snappy
+---
+apiVersion: kafka.strimzi.io/v1
+kind: KafkaTopic
+metadata:
+  name: page-view-events
+  namespace: kafka
+  labels:
+    strimzi.io/cluster: music-streaming-kafka
+spec:
+  partitions: 4
+  replicas: 1
+  config:
+    retention.ms: "604800000"
+    cleanup.policy: delete
+    compression.type: snappy
+---
+apiVersion: kafka.strimzi.io/v1
+kind: KafkaTopic
+metadata:
+  name: auth-events
+  namespace: kafka
+  labels:
+    strimzi.io/cluster: music-streaming-kafka
+spec:
+  partitions: 2
+  replicas: 1
+  config:
+    retention.ms: "604800000"
+    cleanup.policy: delete
+    compression.type: snappy
+---
+apiVersion: kafka.strimzi.io/v1
+kind: KafkaTopic
+metadata:
+  name: status-change-events
+  namespace: kafka
+  labels:
+    strimzi.io/cluster: music-streaming-kafka
+spec:
+  partitions: 2
+  replicas: 1
+  config:
+    retention.ms: "604800000"
+    cleanup.policy: delete
+    compression.type: snappy

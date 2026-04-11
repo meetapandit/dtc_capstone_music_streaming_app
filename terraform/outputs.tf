@@ -48,3 +48,13 @@ output "clickhouse_sa_email" {
   description = "ClickHouse service account email (use for Workload Identity)"
   value       = module.iam.clickhouse_sa_email
 }
+
+output "bq_connection_name" {
+  description = "Fully-qualified BigQuery connection name — paste into create_bronze_tables.sh or BigQuery SQL"
+  value       = module.bigquery.connection_name
+}
+
+output "bq_connection_sa_email" {
+  description = "Google-managed SA for the BigQuery connection — must have GCS access to the Iceberg bucket"
+  value       = module.bigquery.connection_sa_email
+}

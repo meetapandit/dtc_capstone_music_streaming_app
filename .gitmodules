@@ -1,0 +1,3 @@
+[submodule "eventsim-repo"]
+	path = eventsim-repo
+	url = https://github.com/viirya/eventsim.git

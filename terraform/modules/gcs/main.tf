@@ -40,7 +40,7 @@ resource "google_storage_bucket_object" "iceberg_folders" {
 
   name    = each.value
   bucket  = google_storage_bucket.iceberg.name
-  content = ""
+  content = " "
 }
 
 # --- Raw Events Bucket ---

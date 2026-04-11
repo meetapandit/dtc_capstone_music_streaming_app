@@ -1,0 +1,62 @@
+version: 2
+
+models:
+  - name: gold_daily_listening_stats
+    description: >
+      Daily aggregated listening metrics. Primary time-series table for
+      Looker Studio dashboards (plays, listeners, hours streamed, paid vs free).
+    columns:
+      - name: event_date
+        tests: [not_null, unique]
+      - name: total_plays
+        tests: [not_null]
+
+  - name: gold_top_artists_daily
+    description: Artist play counts ranked within each day.
+    columns:
+      - name: event_date
+        tests: [not_null]
+      - name: artist
+        tests: [not_null]
+
+  - name: gold_top_songs_daily
+    description: Song play counts ranked within each day.
+    columns:
+      - name: event_date
+        tests: [not_null]
+      - name: song
+        tests: [not_null]
+
+  - name: gold_user_activity_daily
+    description: >
+      Per-user daily engagement: plays, page views, and subscription changes
+      joined into one row per user per day.
+    columns:
+      - name: event_date
+        tests: [not_null]
+      - name: user_id
+        tests: [not_null]
+
+  - name: gold_hourly_listening_heatmap
+    description: >
+      Play counts grouped by hour-of-day and day-of-week across all dates.
+      Feeds a heatmap chart showing peak listening windows.
+    columns:
+      - name: day_of_week
+        tests: [not_null]
+      - name: hour_of_day
+        tests: [not_null]
+
+  - name: gold_qoq_listener_growth
+    description: >
+      Quarter-over-Quarter unique listener counts with QoQ growth percentage.
+      Feeds the growth scorecard in Looker Studio.
+    columns:
+      - name: quarter_start
+        tests: [not_null, unique]
+      - name: quarter_label
+        tests: [not_null]
+      - name: unique_listeners
+        tests: [not_null]
+      - name: qoq_growth_pct
+        tests: []

@@ -59,6 +59,18 @@ variable "data_machine_type" {
   default     = "e2-standard-8" # 8 vCPU, 32 GB
 }
 
+variable "data_disk_size_gb" {
+  description = "Boot disk size for data service nodes in GB"
+  type        = number
+  default     = 100
+}
+
+variable "data_disk_type" {
+  description = "Boot disk type for data service nodes. Use pd-standard to avoid SSD_TOTAL_GB quota"
+  type        = string
+  default     = "pd-standard"
+}
+
 # --- GCS ---
 
 variable "iceberg_bucket_name" {
@@ -80,4 +92,10 @@ variable "gcs_location" {
   description = "GCS bucket location"
   type        = string
   default     = "US"
+}
+
+variable "bq_connection_id" {
+  description = "ID for the BigQuery Cloud Resource Connection used by BigLake Iceberg tables"
+  type        = string
+  default     = "bigquery-iceberg-connection"
 }

@@ -1,0 +1,22 @@
+# Helm values for the Apache Flink Kubernetes Operator
+# helm repo add flink-operator-repo https://downloads.apache.org/flink/flink-kubernetes-operator-1.9.0/
+# helm install flink-kubernetes-operator flink-operator-repo/flink-kubernetes-operator \
+#   -n flink --create-namespace -f flink-operator-values.yaml
+
+webhook:
+  create: true
+
+defaultConfiguration:
+  create: true
+  append: true
+  flink-conf.yaml: |+
+    kubernetes.operator.reconcile.interval: 15s
+    kubernetes.operator.observer.progress-check.interval: 5s
+
+# Watch all namespaces or just flink
+watchNamespaces: ["flink"]
+
+# Schedule operator itself on general pool
+tolerations: []
+nodeSelector:
+  pool: general

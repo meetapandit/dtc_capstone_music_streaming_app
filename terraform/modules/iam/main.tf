@@ -132,6 +132,63 @@ resource "google_storage_bucket_iam_member" "airflow_raw_bucket_reader" {
 }
 
 # =============================================================================
+# COMPOSER V2 SERVICE AGENT EXTENSION
+# Composer v2 provisions GKE nodes using its own Service Agent SA.
+# That SA needs iam.serviceAccounts.getIamPolicy / setIamPolicy on the project
+# so it can attach the airflow_sa to the Composer environment's node pool.
+# Without this role the environment creation fails with a 400 failedPrecondition.
+# =============================================================================
+
+resource "google_project_iam_member" "composer_v2_service_agent_ext" {
+  project = var.project_id
+  role    = "roles/composer.ServiceAgentV2Ext"
+  member  = "serviceAccount:service-${var.project_number}@cloudcomposer-accounts.iam.gserviceaccount.com"
+}
+
+# =============================================================================
+# BIGQUERY ROLES FOR AIRFLOW (dbt orchestration via Cloud Composer)
+# =============================================================================
+
+# Composer worker role — required for the Composer SA to manage the environment's
+# GKE workloads (pull DAGs, write logs, interact with the Composer API)
+resource "google_project_iam_member" "airflow_composer_worker" {
+  project = var.project_id
+  role    = "roles/composer.worker"
+  member  = "serviceAccount:${google_service_account.airflow.email}"
+}
+
+# Google APIs Service Agent — Composer v2 uses this built-in SA to provision
+# the underlying GKE Autopilot cluster.  It requires roles/editor on the project.
+# This SA is auto-created by GCP but the role binding can be absent in projects
+# with a constrained IAM setup.
+resource "google_project_iam_member" "google_apis_service_agent_editor" {
+  project = var.project_id
+  role    = "roles/editor"
+  member  = "serviceAccount:${var.project_number}@cloudservices.gserviceaccount.com"
+}
+
+# Run dbt jobs (BigQuery job submission)
+resource "google_project_iam_member" "airflow_bq_job_user" {
+  project = var.project_id
+  role    = "roles/bigquery.jobUser"
+  member  = "serviceAccount:${google_service_account.airflow.email}"
+}
+
+# Read/write silver + gold datasets (dbt creates and populates tables)
+resource "google_project_iam_member" "airflow_bq_data_editor" {
+  project = var.project_id
+  role    = "roles/bigquery.dataEditor"
+  member  = "serviceAccount:${google_service_account.airflow.email}"
+}
+
+# Read bronze external tables (dbt sources)
+resource "google_project_iam_member" "airflow_bq_data_viewer" {
+  project = var.project_id
+  role    = "roles/bigquery.dataViewer"
+  member  = "serviceAccount:${google_service_account.airflow.email}"
+}
+
+# =============================================================================
 # WORKLOAD IDENTITY BINDINGS
 # Maps K8s service accounts → GCP service accounts.
 # Format: "serviceAccount:{project}.svc.id.goog[{namespace}/{ksa-name}]"

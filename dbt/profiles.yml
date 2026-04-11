@@ -1,0 +1,23 @@
+# Copy this file to ~/.dbt/profiles.yml (do NOT commit credentials there).
+# Run: gcloud auth application-default login  (once, to set up ADC)
+
+music_streaming:
+  target: dev
+  outputs:
+    dev:
+      type: bigquery
+      method: oauth                        # uses Application Default Credentials
+      project: dtc-capstone-491118
+      dataset: bronze                      # fallback only; silver/gold overridden in dbt_project.yml
+      location: us-west1
+      threads: 4
+      timeout_seconds: 300
+
+    staging:
+      type: bigquery
+      method: oauth
+      project: dtc-capstone-491118
+      dataset: bronze                      # fallback only; gold overridden to gold_staging via macro
+      location: us-west1
+      threads: 4
+      timeout_seconds: 300
