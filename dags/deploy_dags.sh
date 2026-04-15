@@ -8,7 +8,7 @@
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-DAGS_BUCKET="gs://us-west1-dev-music-streamin-a51f2f4a-bucket/dags"
+DAGS_BUCKET="gs://us-west1-dev-music-streamin-a51f2f4a-bucket"
 
 log() { echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*"; }
 

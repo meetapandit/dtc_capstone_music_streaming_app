@@ -60,15 +60,15 @@ kubectl apply -f kafka/kafka-topics.yaml
 # ---------------------------------------------------------------------------
 log "Installing Flink Kubernetes Operator..."
 
-helm repo add flink-operator-repo \
-  https://downloads.apache.org/flink/flink-kubernetes-operator-1.9.0/ 2>/dev/null || true
-helm repo update
-
 # Install cert-manager (required by Flink operator webhook)
 kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.14.5/cert-manager.yaml
 log "Waiting for cert-manager..."
 kubectl rollout status deployment/cert-manager -n cert-manager --timeout=120s
 kubectl rollout status deployment/cert-manager-webhook -n cert-manager --timeout=120s
+
+helm repo add flink-operator-repo \
+  https://downloads.apache.org/flink/flink-kubernetes-operator-1.12.1/
+helm repo update flink-operator-repo
 
 helm upgrade --install flink-kubernetes-operator \
   flink-operator-repo/flink-kubernetes-operator \

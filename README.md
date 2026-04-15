@@ -114,6 +114,66 @@ uv pip install .
 uv pip install --group dev .
 ```
 
+---
+
+### Makefile — One Command Setup
+
+A `Makefile` is provided to simplify running the full pipeline. After installing all prerequisites and Python dependencies above, use `make` as your single entry point:
+
+```bash
+# See all available targets
+make help
+
+# Full cold-start — provisions infra, deploys GKE, submits Flink job, runs dbt, deploys DAGs
+make all
+
+# Or run steps individually (Recommended to keep track of all resources)
+
+# Infrastructure
+make tf-init              # initialise Terraform
+make tf-plan              # preview infrastructure changes
+make tf-apply             # provision all GCP resources
+make tf-destroy           # tear down all GCP resources (irreversible)
+
+# GKE — Kafka + Flink
+make gke-connect          # configure kubectl
+make gke-deploy           # deploy Strimzi Kafka + Flink operator
+make flink-deploy-cluster # deploy Flink session cluster (JobManager + TaskManager)
+make flink-submit         # submit Flink SQL job (kafka → iceberg)
+make flink-ui             # port-forward Flink Web UI to localhost:8081
+make gke-status           # show pod status across kafka and flink namespaces
+
+# Eventsim — Data Generation
+make eventsim-build                                          # build Docker image (one-time)
+make eventsim-generate                                       # generate 2025 Q1 events (default)
+make eventsim-generate EVENTSIM_START=2026-01-01 EVENTSIM_END=2026-03-31  # generate 2026 Q1
+
+# Streaming
+make kafka-external-ip                          # get Kafka broker external IP
+make stream BROKER=<ip>:9094 STREAM_SPEED=0    # stream events to Kafka
+
+# BigQuery
+make bronze-tables        # create BigLake Iceberg external tables in bronze dataset
+
+# dbt
+make dbt-setup            # copy profiles.yml to ~/.dbt/ (one-time)
+make dbt-run              # build silver + gold models (incremental)
+make dbt-test             # run data quality tests
+make dbt-full-refresh     # rebuild all tables from scratch (prompts for confirmation)
+make dbt-silver           # run silver layer only
+make dbt-gold             # run gold layer only
+make dbt-docs             # generate and serve dbt docs at localhost:8080
+
+# Composer / Airflow
+make composer-deploy      # upload DAG + dbt project to Composer GCS bucket
+make composer-trigger     # manually trigger the music_streaming_dbt_wap DAG
+make composer-list-dags   # list DAGs loaded in Airflow
+```
+
+> **Note**: `make all` rebuilds infrastructure only — after a fresh deploy you still need to generate and stream events, create bronze tables, and run dbt manually.
+
+---
+
 ### 1. GCP Account Setup
 
 ```bash
@@ -136,37 +196,39 @@ gcloud services enable \
 
 ### 2. Terraform Infrastructure
 
+Copy and fill in your values before running:
 ```bash
-cd terraform
-
-# Copy and fill in your values
-cp terraform.tfvars.example terraform.tfvars
-# Edit terraform.tfvars: set project_id, region, bucket names (it is recommended to add your_project_id as prefix to your bucket name to make it glob ally unique)
-
-terraform init
-terraform plan -out=tfplan
-terraform apply "tfplan"
+cp terraform/terraform.tfvars.example terraform/terraform.tfvars
+# Edit terraform.tfvars: set project_id, region, bucket names
+# Prefix bucket names with your project_id to ensure global uniqueness
 ```
 
-This provisions:
+Then provision with Make:
+```bash
+make tf-init
+make tf-plan
+make tf-apply
+```
+
+**Resources provisioned:**
 - **GKE cluster** — 2 node pools (general + data), `e2-standard-2`
 - **GCS buckets** — Iceberg warehouse, raw events, dbt artifacts
 - **IAM** — service accounts, Workload Identity, BigLake connection SA
 - **BigQuery connection** — Cloud Resource Connection for BigLake external tables
 - **Cloud Composer 3** — managed Airflow environment
 
-> **Quota note**: You need at least 8 CPUs (all regions) for the GKE cluster + Composer. Request a quota increase to a total of 32 CPUs (all regions) at the beginning itself at `console.cloud.google.com/iam-admin/quotas`.
-
-> To Request Quota increase Go to IAM & Admin in hamburger icon on top left and select Quotas & System Limits -> Look for Compute Engine API and under name column CPU (all regions) -> Click the 3 dots on the right and request 32 CPUs
+> **Quota note**: You need at least 32 CPUs (all regions) for the GKE cluster + Composer. Request this at the start before running Terraform.
+> Go to **GCP Console → IAM & Admin → Quotas & System Limits → Compute Engine API → CPUs (all regions)** → click the 3 dots → **Edit Quota** → request 32.
 
 ### 3. Deploy Kafka and Flink to GKE
 
 ```bash
-cd k8s
-bash deploy.sh
+make gke-connect
+make gke-deploy
+make flink-submit
 ```
 
-This installs Strimzi (Kafka operator), creates Kafka topics, installs the Flink Kubernetes Operator, and deploys the Flink session cluster.
+This installs Strimzi (Kafka operator), creates Kafka topics, installs the Flink Kubernetes Operator, deploys the Flink session cluster, and submits the Kafka → Iceberg SQL job.
 
 ### 4. Generate Eventsim Data
 
@@ -181,34 +243,26 @@ Eventsim requires Java 11. On Apple Silicon (ARM64) Macs, JAXB/JNA incompatibili
 #### Build the Docker image
 
 ```bash
-# Clone the eventsim repo (one-time setup)
-git clone https://github.com/viirya/eventsim.git eventsim-repo
+# Initialise the submodule (one-time)
+git submodule update --init
 
-cd eventsim-repo
-docker build --platform linux/amd64 -t eventsim .
+# Build the eventsim Docker image (one-time)
+make eventsim-build
 ```
 
 #### Generate data
 
 ```bash
-cd eventsim
-
-# 2025 Q1
-EVENTSIM_START=2025-01-01 EVENTSIM_END=2025-03-31 \
-  bash scripts/generate_events_docker.sh
+# 2025 Q1 (default)
+make eventsim-generate
 
 # 2026 Q1
-EVENTSIM_START=2026-01-01 EVENTSIM_END=2026-03-31 \
-  bash scripts/generate_events_docker.sh
+make eventsim-generate EVENTSIM_START=2026-01-01 EVENTSIM_END=2026-03-31
 ```
 
 Each run generates two files per quarter — `control` (users 1–10,000) and `test` (users 10,001–20,000) — matching an A/B testing design.
 
 Output: `eventsim/output/YYYY_Q1_control.json`, `eventsim/output/YYYY_Q1_test.json`
-
-#### Skip data generation
-
-Pre-generated JSON files are in `eventsim/output/`. You can stream them directly to Kafka without re-running eventsim.
 
 ---
 
@@ -217,46 +271,71 @@ Pre-generated JSON files are in `eventsim/output/`. You can stream them directly
 ### 5. Stream Events to Kafka
 
 ```bash
-uv add confluent-kafka
-
-# Get the external Kafka broker IP
-kubectl get svc music-streaming-kafka-kafka-external-bootstrap \
-  -n kafka -o jsonpath='{.status.loadBalancer.ingress[0].ip}'
-
-python eventsim/scripts/stream_to_kafka.py \
-  --output-dir eventsim/output \
-  --broker <KAFKA_IP>:9094 \
-  --speed-multiplier 0
-```
-
-### 6. Submit the Flink Job
-
-```bash
-cd k8s/flink/jobs
-bash submit-job.sh
+make kafka-external-ip                          # get the broker IP
+make stream BROKER=<ip>:9094 STREAM_SPEED=0    # stream all events
 ```
 
 Flink reads from all 4 Kafka topics and writes to partitioned Iceberg tables on GCS under `gs://YOUR_BUCKET/warehouse/music_streaming/`.
 
-### 7. Create BigQuery Bronze Tables
+### 6. Create BigQuery Bronze Tables
 
-Once Flink has written data to GCS:
+Once Flink has written data to GCS (partitions visible up to the latest date):
 
 ```bash
-bash dbt/setup/create_bronze_tables.sh
+make bronze-tables
 ```
 
 This creates BigLake external tables in the `bronze` dataset pointing to the latest Iceberg metadata snapshots.
 
-### 8. Run dbt
+### 7. Run dbt
 
 ```bash
-cd dbt
-cp profiles.yml ~/.dbt/profiles.yml   # first time only
+make dbt-setup    # first time only
 
-dbt run
-dbt test
+make dbt-run      # build silver + gold
+make dbt-test     # validate data quality
 ```
+
+### 8. Create dbt docs for lineage and models
+```bash
+make dbt-docs
+```
+
+---
+
+## Tearing Down
+
+When you are done, destroy all GCP resources to avoid ongoing charges.
+
+### Step 1: Empty GCS buckets
+
+Terraform cannot delete non-empty buckets. Empty them first:
+
+```bash
+gcloud storage rm -r 'gs://YOUR_PROJECT_ID-iceberg-warehouse/**'
+gcloud storage rm -r 'gs://YOUR_PROJECT_ID-raw-events/**'
+gcloud storage rm -r 'gs://YOUR_PROJECT_ID-dbt-artifacts/**'
+```
+
+> Run `gcloud storage ls` to confirm your exact bucket names.
+
+### Step 2: Delete BigQuery datasets
+
+These are not managed by Terraform and must be removed manually:
+
+```bash
+bq rm -r -f --dataset YOUR_PROJECT_ID:bronze
+bq rm -r -f --dataset YOUR_PROJECT_ID:silver
+bq rm -r -f --dataset YOUR_PROJECT_ID:gold
+```
+
+### Step 3: Destroy all infrastructure
+
+```bash
+make tf-destroy
+```
+
+This tears down the GKE cluster, Cloud Composer, GCS buckets, IAM, VPC, and BigQuery connection. The Composer-managed GCS bucket is deleted automatically by GCP when the Composer environment is destroyed.
 
 ---
 
