@@ -2,6 +2,7 @@ from diagrams import Cluster, Diagram, Edge
 from diagrams.gcp.analytics import BigQuery, Composer, Looker
 from diagrams.gcp.storage import GCS
 from diagrams.onprem.analytics import Flink, Dbt
+from diagrams.onprem.iac import Terraform
 from diagrams.onprem.queue import Kafka
 from diagrams.programming.language import Python
 
@@ -21,19 +22,22 @@ with Diagram(
 ):
     producer = Python("Eventsim\nProducer")
 
-    with Cluster("GKE"):
-        kafka  = Kafka("Strimzi\nKafka")
-        flink  = Flink("Flink\nStream Processing")
+    with Cluster("Terraform — Infrastructure as Code"):
+        with Cluster("GKE"):
+            kafka  = Kafka("Strimzi\nKafka")
+            flink  = Flink("Flink\nStream Processing")
 
-    with Cluster("Data Lakehouse"):
-        iceberg = GCS("Iceberg\non GCS")
+        with Cluster("Data Lakehouse"):
+            iceberg = GCS("Iceberg\non GCS")
 
-    with Cluster("BigQuery"):
-        bronze   = BigQuery("Bronze\n(External Iceberg)")
-        dbt_tool = Dbt("dbt\nSilver / Gold")
+        with Cluster("BigQuery"):
+            bronze   = BigQuery("Bronze\n(External Iceberg)")
+            dbt_tool = Dbt("dbt\nSilver / Gold")
 
-    with Cluster("Orchestration"):
-        composer = Composer("Cloud Composer\n(Airflow WAP DAG)")
+        with Cluster("Orchestration"):
+            composer = Composer("Cloud Composer\n(Airflow WAP DAG)")
+
+        tf = Terraform("Terraform")
 
     viz = Looker("Looker Studio\nDashboards")
 
@@ -42,3 +46,9 @@ with Diagram(
 
     # Composer triggers dbt
     composer >> Edge(style="dashed") >> dbt_tool
+
+    # Terraform provisions all infra (dashed)
+    tf >> Edge(style="dashed", color="orange") >> kafka
+    tf >> Edge(style="dashed", color="orange") >> iceberg
+    tf >> Edge(style="dashed", color="orange") >> bronze
+    tf >> Edge(style="dashed", color="orange") >> composer
